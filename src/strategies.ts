@@ -6,6 +6,10 @@ import type {
   RobotCounts,
 } from "./types";
 
+interface CostOptimizedCandidate extends EvaluatedCandidate {
+  chargingCost: number;
+}
+
 export function emptyCounts(): RobotCounts {
   return { Bravo: 0, Charlie: 0, Delta: 0 };
 }
@@ -196,6 +200,21 @@ function pickBest(
   return viable[0] ?? null;
 }
 
+function compareCostOptimizedAssignments(
+  a: CostOptimizedCandidate,
+  b: CostOptimizedCandidate,
+): number {
+  if (a.chargingCost !== b.chargingCost) {
+    return a.chargingCost - b.chargingCost;
+  }
+
+  if (a.excess !== b.excess) {
+    return a.excess - b.excess;
+  }
+
+  return compareAssignments(a, b);
+}
+
 export function assignByLevel(
   inventory: Inventory,
   requestedHours: number,
@@ -234,4 +253,53 @@ export function assignByLevel(
   }
 
   return fallback;
+}
+
+export function assignByCostEfficiency(
+  inventory: Inventory,
+  requestedHours: number,
+): CostOptimizedCandidate | null {
+  const candidates: Candidate[] = [];
+
+  for (let bravo = 0; bravo <= inventory.Bravo; bravo += 1) {
+    for (let charlie = 0; charlie <= inventory.Charlie; charlie += 1) {
+      for (let delta = 0; delta <= inventory.Delta; delta += 1) {
+        if (bravo + charlie + delta === 0) {
+          continue;
+        }
+
+        const counts = emptyCounts();
+        counts.Bravo = bravo;
+        counts.Charlie = charlie;
+        counts.Delta = delta;
+        candidates.push({ counts, level: 0, name: "Cost-based" });
+      }
+    }
+  }
+
+  const viable = candidates
+    .map((candidate) => {
+      const provided = capacityForCounts(candidate.counts);
+
+      if (provided < requestedHours) {
+        return null;
+      }
+
+      const chargingCost =
+        candidate.counts.Bravo * ROBOT_TYPES.Bravo.chargingCostPerDay +
+        candidate.counts.Charlie * ROBOT_TYPES.Charlie.chargingCostPerDay +
+        candidate.counts.Delta * ROBOT_TYPES.Delta.chargingCostPerDay;
+
+      return {
+        ...candidate,
+        counts: cloneCounts(candidate.counts),
+        provided,
+        excess: provided - requestedHours,
+        chargingCost,
+      } satisfies CostOptimizedCandidate;
+    })
+    .filter((candidate): candidate is CostOptimizedCandidate => candidate !== null)
+    .sort(compareCostOptimizedAssignments);
+
+  return viable[0] ?? null;
 }

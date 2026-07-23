@@ -1,6 +1,10 @@
 import readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
-import { assignRobots, formatAssignment } from "./assigner";
+import {
+  assignRobots,
+  assignRobotsByCostEfficiency,
+  formatAssignment,
+} from "./assigner";
 import { ROBOT_ORDER } from "./robots";
 import type { Inventory, RobotType } from "./types";
 
@@ -27,6 +31,16 @@ async function promptInventory(rl: readline.Interface): Promise<Inventory> {
   return inventory;
 }
 
+async function promptStrategy(rl: readline.Interface): Promise<"primary" | "cost"> {
+  const answer = (await rl.question("\nChoose strategy (1=Primary, 2=Cost Efficiency) [1]: ")).trim();
+
+  if (answer === "2") {
+    return "cost";
+  }
+
+  return "primary";
+}
+
 export async function main(): Promise<void> {
   const rl = readline.createInterface({ input, output });
 
@@ -36,8 +50,14 @@ export async function main(): Promise<void> {
     const workHoursInput = await rl.question("\nEnter client work hours:\n");
     const requestedHours = Number.parseInt(workHoursInput.trim(), 10);
 
-    const result = assignRobots(inventory, requestedHours);
-    console.log(`\n${formatAssignment(result)}`);
+    const strategy = await promptStrategy(rl);
+
+    const result =
+      strategy === "cost"
+        ? assignRobotsByCostEfficiency(inventory, requestedHours)
+        : assignRobots(inventory, requestedHours);
+
+    console.log(`\n${formatAssignment(result, result.strategyName ?? "Robot Assignment")}`);
   } finally {
     rl.close();
   }

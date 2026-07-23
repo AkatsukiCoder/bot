@@ -1,4 +1,4 @@
-import { assignByLevel } from "./strategies";
+import { assignByLevel, assignByCostEfficiency } from "./strategies";
 import { ROBOT_ORDER } from "./robots";
 import type { AssignmentResult, Inventory } from "./types";
 
@@ -57,8 +57,38 @@ export function assignRobots(
   };
 }
 
-export function formatAssignment(result: AssignmentResult): string {
-  const lines = ["Robot Assignment"];
+export function assignRobotsByCostEfficiency(
+  inventory: Inventory,
+  requestedHours: number,
+): AssignmentResult {
+  if (!Number.isInteger(requestedHours) || requestedHours <= 0) {
+    throw new Error("Client work hours must be a positive integer.");
+  }
+
+  const assignment = assignByCostEfficiency(inventory, requestedHours);
+
+  if (!assignment) {
+    throw new Error(
+      `Unable to fulfil ${requestedHours} work hours with available robots.`,
+    );
+  }
+
+  return {
+    counts: assignment.counts,
+    provided: assignment.provided,
+    requested: requestedHours,
+    excess: assignment.excess,
+    level: assignment.level,
+    chargingCost: assignment.chargingCost,
+    strategyName: "Cost Optimized Allocation",
+  };
+}
+
+export function formatAssignment(
+  result: AssignmentResult,
+  heading = "Robot Assignment",
+): string {
+  const lines = [heading];
 
   for (const type of ROBOT_ORDER) {
     lines.push(`${type}: ${result.counts[type]}`);
@@ -66,7 +96,12 @@ export function formatAssignment(result: AssignmentResult): string {
 
   lines.push("");
   lines.push(`Total Work Hours Provided: ${result.provided}`);
-  lines.push(`Client Work Hours Requested: ${result.requested}`);
+
+  if (typeof result.chargingCost === "number") {
+    lines.push(`Total Charging Cost: $${result.chargingCost}`);
+  } else {
+    lines.push(`Client Work Hours Requested: ${result.requested}`);
+  }
 
   return lines.join("\n");
 }

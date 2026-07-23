@@ -16,6 +16,8 @@ export interface AssignmentResult {
   requested: number;
   excess: number;
   level: number;
+  chargingCost?: number;
+  strategyName?: string;
 }
 
 export interface Candidate {
