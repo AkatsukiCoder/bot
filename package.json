@@ -1,0 +1,22 @@
+{
+  "name": "robot-assignment-system",
+  "version": "1.0.0",
+  "description": "Assigns robots to fulfil client work efficiently using level-based strategies",
+  "main": "dist/src/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "tsx src/index.ts",
+    "start:prod": "npm run build && node dist/src/index.js",
+    "test": "npm run build && node --test dist/test/assigner.test.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": ["robotics", "assignment", "optimization"],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.8.0"
+  }
+}
