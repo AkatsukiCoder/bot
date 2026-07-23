@@ -2,21 +2,39 @@
   "name": "robot-assignment-system",
   "version": "1.0.0",
   "description": "Assigns robots to fulfil client work efficiently using level-based strategies",
+  "type": "module",
   "main": "dist/src/index.js",
   "scripts": {
+    "dev": "tsx src/index.ts",
     "build": "tsc",
-    "start": "tsx src/index.ts",
-    "start:prod": "npm run build && node dist/src/index.js",
-    "test": "npm run build && node --test dist/test/assigner.test.js"
+    "start": "node dist/src/index.js",
+    "start:prod": "npm run build && npm run start",
+    "test": "vitest run",
+    "lint": "eslint \"src/**/*.{ts,tsx}\" \"test/**/*.ts\"",
+    "typecheck": "tsc --noEmit",
+    "prepare": "husky install"
   },
   "engines": {
     "node": ">=18.0.0"
   },
-  "keywords": ["robotics", "assignment", "optimization"],
+  "keywords": [
+    "robotics",
+    "assignment",
+    "optimization"
+  ],
   "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2"
+  },
   "devDependencies": {
+    "@types/express": "^4.17.17",
     "@types/node": "^24.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.11.0",
+    "@typescript-eslint/parser": "^6.11.0",
+    "eslint": "^8.57.0",
+    "husky": "^9.0.0",
     "tsx": "^4.20.0",
-    "typescript": "^5.8.0"
+    "typescript": "^5.8.0",
+    "vitest": "^3.2.4"
   }
 }

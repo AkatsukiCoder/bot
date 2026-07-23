@@ -1,71 +1,57 @@
-import readline from "node:readline/promises";
-import { stdin as input, stdout as output } from "node:process";
+import express from "express";
 import {
   assignRobots,
   assignRobotsByCostEfficiency,
-  formatAssignment,
 } from "./assigner";
-import { ROBOT_ORDER } from "./robots";
-import type { Inventory, RobotType } from "./types";
+import type { Inventory } from "./types";
 
-function parseCount(line: string, type: RobotType): number {
-  const count = Number.parseInt(line.trim(), 10);
+const app = express();
+app.use(express.json());
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Content-Type");
 
-  if (!Number.isInteger(count) || count < 0) {
-    throw new Error(`${type} count must be a non-negative integer.`);
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
   }
 
-  return count;
-}
+  next();
+});
 
-async function promptInventory(rl: readline.Interface): Promise<Inventory> {
-  const inventory: Inventory = { Bravo: 0, Charlie: 0, Delta: 0 };
+app.get("/api/health", (_req, res) => {
+  res.json({ status: "ok" });
+});
 
-  console.log("Enter number of robots available:");
+app.post("/api/assign", (req, res) => {
+  const { inventory, requestedHours } = req.body as {
+    inventory?: Inventory;
+    requestedHours?: number;
+  };
 
-  for (const type of ROBOT_ORDER) {
-    const line = await rl.question(`${type}: `);
-    inventory[type] = parseCount(line, type);
+  if (!inventory || typeof requestedHours !== "number") {
+    return res.status(400).json({ error: "Invalid request payload." });
   }
-
-  return inventory;
-}
-
-async function promptStrategy(rl: readline.Interface): Promise<"primary" | "cost"> {
-  const answer = (await rl.question("\nChoose strategy (1=Primary, 2=Cost Efficiency) [1]: ")).trim();
-
-  if (answer === "2") {
-    return "cost";
-  }
-
-  return "primary";
-}
-
-export async function main(): Promise<void> {
-  const rl = readline.createInterface({ input, output });
 
   try {
-    const inventory = await promptInventory(rl);
+    const strategy1 = assignRobots(inventory, requestedHours);
+    const strategy2 = assignRobotsByCostEfficiency(inventory, requestedHours);
 
-    const workHoursInput = await rl.question("\nEnter client work hours:\n");
-    const requestedHours = Number.parseInt(workHoursInput.trim(), 10);
+    return res.json({ strategy1, strategy2 });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(400).json({ error: error.message });
+    }
 
-    const strategy = await promptStrategy(rl);
-
-    const result =
-      strategy === "cost"
-        ? assignRobotsByCostEfficiency(inventory, requestedHours)
-        : assignRobots(inventory, requestedHours);
-
-    console.log(`\n${formatAssignment(result, result.strategyName ?? "Robot Assignment")}`);
-  } finally {
-    rl.close();
+    return res.status(500).json({ error: "Unknown server error." });
   }
-}
+});
 
-if (require.main === module) {
-  main().catch((error: Error) => {
-    console.error(error.message);
-    process.exitCode = 1;
+const port = process.env.PORT ? Number(process.env.PORT) : 4000;
+
+if (process.env.NODE_ENV !== "test") {
+  app.listen(port, () => {
+    console.log(`Backend API listening on http://localhost:${port}`);
   });
 }
+
+export default app;
